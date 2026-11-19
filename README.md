@@ -6,7 +6,7 @@ Search any pro player (NBA, WNBA, NFL, MLB, NHL, college basketball and football
 - the year they joined the league and the year they retired
 - a specific stat if you want one (you type which)
 
-The **My Stats** tab lets you track your own games. You must pick a sport first; stats are saved in your browser.
+The **My & Friends' Stats** tab has two columns: one for your own games and one for friends (type their name first). You must pick a sport before saving; stats are saved in your browser.
 
 ## How it works
 - `index.html` is the whole front end (no build step).

@@ -110,6 +110,13 @@
   .del { background: none; border: 0; color: var(--danger); cursor: pointer; font-size: 16px; }
   .empty { color: var(--muted); text-align: center; padding: 20px; }
   .spinner { color: var(--muted); margin-top: 12px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .two-col > div { min-width: 0; }
+  .col-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .col-head .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-2); }
+  .col-head.friends .dot { background: #6aa8ff; }
+  .friend-name { font-family: Oswald; font-size: 22px; color: #6aa8ff; margin: 18px 0 8px; }
+  @media (max-width: 860px) { .two-col { grid-template-columns: 1fr; } }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px; }
   @media (max-width: 560px) { .searchbar { flex-direction: column; } button.btn { width: 100%; } }
 </style>
@@ -117,10 +124,10 @@
 <body>
 <header>
   <h1>Stat <span>Tracker</span></h1>
-  <div class="sub">Look up any pro player's stats, or track your own.</div>
+  <div class="sub">Look up any pro player's stats, or track your own and your friends'.</div>
   <nav class="tabs">
     <button class="tab active" data-tab="search">Player Search</button>
-    <button class="tab" data-tab="mine">My Stats</button>
+    <button class="tab" data-tab="mine">My &amp; Friends' Stats</button>
   </nav>
 </header>
 
@@ -176,37 +183,64 @@
     <div id="stepResult" class="hidden"></div>
   </section>
 
-  <!-- ====================== MY STATS ====================== -->
+  <!-- ====================== MY STATS + FRIENDS ====================== -->
   <section id="tab-mine" class="hidden">
-    <div class="card">
-      <div class="section-title">
-        <h2>Track my stats</h2>
+    <div class="two-col">
+      <!-- My column -->
+      <div>
+        <div class="card">
+          <div class="col-head"><span class="dot"></span><h2>My Stats</h2></div>
+          <form class="tracker-form" data-who="me">
+            <div style="margin-top:12px">
+              <label>What sport do you want to track? (required)</label>
+              <select class="t-sport" required><option value="">— Pick a sport —</option></select>
+            </div>
+            <div class="t-fields hidden">
+              <div class="grid-form">
+                <div><label>Date</label><input type="date" class="t-date" required /></div>
+                <div><label>Opponent / event</label><input class="t-opp" placeholder="e.g. Hudson" /></div>
+              </div>
+              <div class="grid-form t-stats"></div>
+              <div class="row" style="margin-top:14px"><button class="btn green" type="submit">Save my game</button></div>
+            </div>
+            <div class="t-msg"></div>
+          </form>
+        </div>
+        <div id="mineTables"></div>
       </div>
-      <form id="myForm">
-        <div style="margin-top:12px">
-          <label for="mySport">What sport do you want to track? (required)</label>
-          <select id="mySport" required>
-            <option value="">— Pick a sport —</option>
-          </select>
+
+      <!-- Friends column -->
+      <div>
+        <div class="card">
+          <div class="col-head friends"><span class="dot"></span><h2>Friends' Stats</h2></div>
+          <form class="tracker-form" data-who="friend">
+            <div style="margin-top:12px">
+              <label>Friend's name (required)</label>
+              <input class="t-friend" list="friendList" placeholder="Type your friend's name" />
+              <datalist id="friendList"></datalist>
+            </div>
+            <div style="margin-top:12px">
+              <label>What sport do you want to track? (required)</label>
+              <select class="t-sport" required><option value="">— Pick a sport —</option></select>
+            </div>
+            <div class="t-fields hidden">
+              <div class="grid-form">
+                <div><label>Date</label><input type="date" class="t-date" required /></div>
+                <div><label>Opponent / event</label><input class="t-opp" placeholder="e.g. Hudson" /></div>
+              </div>
+              <div class="grid-form t-stats"></div>
+              <div class="row" style="margin-top:14px"><button class="btn" type="submit" style="background:#6aa8ff;color:#001a3d">Save friend's game</button></div>
+            </div>
+            <div class="t-msg"></div>
+          </form>
         </div>
-        <div id="myFields" class="hidden">
-          <div class="grid-form">
-            <div><label>Date</label><input type="date" id="myDate" required /></div>
-            <div><label>Opponent / event</label><input id="myOpp" placeholder="e.g. Hudson" /></div>
-          </div>
-          <div class="grid-form" id="myStatFields"></div>
-          <div class="row" style="margin-top:14px">
-            <button class="btn green" type="submit">Save game</button>
-          </div>
-        </div>
-        <div id="myMsg"></div>
-      </form>
+        <div id="friendTables"></div>
+      </div>
     </div>
-    <div id="myTables"></div>
   </section>
 </main>
 
-<footer>Pro stats from ESPN's public data. Your own stats are saved on this device only.</footer>
+<footer>Pro stats from ESPN's public data. Your and your friends' stats are saved on this device only.</footer>
 
 <script>
 /* ---------------- helpers ---------------- */
@@ -446,56 +480,82 @@ const KEY = 'myStats.v1';
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } };
 const save = (rows) => { try { localStorage.setItem(KEY, JSON.stringify(rows)); } catch {} };
 
-$('mySport').innerHTML += Object.keys(SPORTS).map((s) => `<option>${esc(s)}</option>`).join('');
-$('myDate').valueAsDate = new Date();
+// Older saved games (before friends existed) belong to "me".
+const whoOf = (r) => r.who || 'me';
 
-$('mySport').addEventListener('change', () => {
-  const s = $('mySport').value;
-  show($('myFields'), !!s);
-  msg($('myMsg'));
-  if (!s) return;
-  $('myStatFields').innerHTML = SPORTS[s].map((f, i) =>
-    `<div><label for="f${i}">${esc(f)}</label><input id="f${i}" type="number" step="any" inputmode="decimal" placeholder="0" /></div>`).join('');
+document.querySelectorAll('.tracker-form').forEach((form) => {
+  const q = (c) => form.querySelector(c);
+  const isFriend = form.dataset.who === 'friend';
+  q('.t-sport').innerHTML += Object.keys(SPORTS).map((s) => `<option>${esc(s)}</option>`).join('');
+  q('.t-date').valueAsDate = new Date();
+
+  q('.t-sport').addEventListener('change', () => {
+    const s = q('.t-sport').value;
+    show(q('.t-fields'), !!s);
+    msg(q('.t-msg'));
+    if (!s) return;
+    q('.t-stats').innerHTML = SPORTS[s].map((f) =>
+      `<div><label>${esc(f)}</label><input data-stat="${esc(f)}" type="number" step="any" inputmode="decimal" placeholder="0" /></div>`).join('');
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = isFriend ? q('.t-friend').value.trim() : 'me';
+    if (isFriend && !name) return msg(q('.t-msg'), "Type your friend's name first.");
+    const sport = q('.t-sport').value;
+    if (!sport) return msg(q('.t-msg'), 'You have to pick which sport you want to track first.');
+    const stats = {};
+    q('.t-stats').querySelectorAll('input').forEach((i) => { if (i.value !== '') stats[i.dataset.stat] = Number(i.value); });
+    if (!Object.keys(stats).length) return msg(q('.t-msg'), 'Enter at least one stat.');
+    const rows = load();
+    rows.push({ id: Date.now(), who: isFriend ? 'friend:' + name : 'me', sport, date: q('.t-date').value, opp: q('.t-opp').value.trim(), stats });
+    save(rows);
+    q('.t-stats').querySelectorAll('input').forEach((i) => (i.value = ''));
+    q('.t-opp').value = '';
+    msg(q('.t-msg'), isFriend ? `Saved ${name}'s ${sport.toLowerCase()} game!` : `Saved your ${sport.toLowerCase()} game!`, false);
+    renderMine();
+  });
 });
 
-$('myForm').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const sport = $('mySport').value;
-  if (!sport) return msg($('myMsg'), 'You have to pick which sport you want to track first.');
-  const stats = {};
-  SPORTS[sport].forEach((f, i) => { const v = $('f' + i).value; if (v !== '') stats[f] = Number(v); });
-  if (!Object.keys(stats).length) return msg($('myMsg'), 'Enter at least one stat.');
-  const rows = load();
-  rows.push({ id: Date.now(), sport, date: $('myDate').value, opp: $('myOpp').value.trim(), stats });
-  save(rows);
-  SPORTS[sport].forEach((f, i) => ($('f' + i).value = ''));
-  $('myOpp').value = '';
-  msg($('myMsg'), `Saved your ${sport.toLowerCase()} game!`, false);
-  renderMine();
-});
+function sportTable(sport, games) {
+  games.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const fields = SPORTS[sport] || [...new Set(games.flatMap((g) => Object.keys(g.stats)))];
+  const used = fields.filter((f) => games.some((g) => g.stats[f] != null));
+  const tot = (f) => games.reduce((s, g) => s + (g.stats[f] ?? 0), 0);
+  const cnt = (f) => games.filter((g) => g.stats[f] != null).length;
+  const fmt = (n) => (Math.round(n * 10) / 10).toString();
+  return `<div class="card"><div class="section-title"><h3>${esc(sport)}</h3><span class="hint">${games.length} game${games.length > 1 ? 's' : ''}</span></div>
+    <div class="table-wrap"><table>
+    <tr><th>Date</th><th>Opponent</th>${used.map((f) => `<th>${esc(f)}</th>`).join('')}<th></th></tr>
+    ${games.map((g) => `<tr><td>${esc(g.date)}</td><td>${esc(g.opp || '—')}</td>${used.map((f) => `<td>${esc(g.stats[f] ?? '—')}</td>`).join('')}
+      <td><button class="del" title="Delete" data-id="${g.id}">✕</button></td></tr>`).join('')}
+    <tr class="total"><td>Total</td><td></td>${used.map((f) => `<td>${NO_TOTAL.test(f) ? '—' : fmt(tot(f))}</td>`).join('')}<td></td></tr>
+    <tr class="total"><td>Per game</td><td></td>${used.map((f) => `<td>${cnt(f) ? fmt(tot(f) / cnt(f)) : '—'}</td>`).join('')}<td></td></tr>
+    </table></div></div>`;
+}
+
+function bySportHtml(games) {
+  const g = {};
+  games.forEach((r) => (g[r.sport] ||= []).push(r));
+  return Object.entries(g).map(([sport, list]) => sportTable(sport, list)).join('');
+}
 
 function renderMine() {
   const rows = load();
-  if (!rows.length) { $('myTables').innerHTML = '<div class="card empty">No games saved yet. Pick a sport above and add your first game.</div>'; return; }
-  const bySport = {};
-  rows.forEach((r) => (bySport[r.sport] ||= []).push(r));
-  $('myTables').innerHTML = Object.entries(bySport).map(([sport, games]) => {
-    games.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-    const fields = SPORTS[sport] || [...new Set(games.flatMap((g) => Object.keys(g.stats)))];
-    const used = fields.filter((f) => games.some((g) => g.stats[f] != null));
-    const tot = (f) => games.reduce((s, g) => s + (g.stats[f] ?? 0), 0);
-    const cnt = (f) => games.filter((g) => g.stats[f] != null).length;
-    const fmt = (n) => (Math.round(n * 10) / 10).toString();
-    return `<div class="card"><div class="section-title"><h2>${esc(sport)}</h2><span class="hint">${games.length} game${games.length > 1 ? 's' : ''}</span></div>
-      <div class="table-wrap"><table>
-      <tr><th>Date</th><th>Opponent</th>${used.map((f) => `<th>${esc(f)}</th>`).join('')}<th></th></tr>
-      ${games.map((g) => `<tr><td>${esc(g.date)}</td><td>${esc(g.opp || '—')}</td>${used.map((f) => `<td>${esc(g.stats[f] ?? '—')}</td>`).join('')}
-        <td><button class="del" title="Delete" data-id="${g.id}">✕</button></td></tr>`).join('')}
-      <tr class="total"><td>Total</td><td></td>${used.map((f) => `<td>${NO_TOTAL.test(f) ? '—' : fmt(tot(f))}</td>`).join('')}<td></td></tr>
-      <tr class="total"><td>Per game</td><td></td>${used.map((f) => `<td>${cnt(f) ? fmt(tot(f) / cnt(f)) : '—'}</td>`).join('')}<td></td></tr>
-      </table></div></div>`;
-  }).join('');
-  $('myTables').querySelectorAll('.del').forEach((b) => b.addEventListener('click', () => {
+  const mine = rows.filter((r) => whoOf(r) === 'me');
+  const friends = {};
+  rows.filter((r) => whoOf(r) !== 'me').forEach((r) => (friends[whoOf(r).slice(7)] ||= []).push(r));
+
+  $('mineTables').innerHTML = mine.length ? bySportHtml(mine)
+    : '<div class="card empty">No games saved yet. Pick a sport above and add your first game.</div>';
+
+  const names = Object.keys(friends).sort((a, b) => a.localeCompare(b));
+  $('friendList').innerHTML = names.map((n) => `<option value="${esc(n)}">`).join('');
+  $('friendTables').innerHTML = names.length
+    ? names.map((n) => `<div class="friend-name">${esc(n)}</div>${bySportHtml(friends[n])}`).join('')
+    : '<div class="card empty">No friend stats yet. Type a friend\'s name, pick a sport, and add their game.</div>';
+
+  document.querySelectorAll('#tab-mine .del').forEach((b) => b.addEventListener('click', () => {
     if (!confirm('Delete this game?')) return;
     save(load().filter((r) => String(r.id) !== b.dataset.id));
     renderMine();
