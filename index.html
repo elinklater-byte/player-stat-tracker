@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Stat Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0d1420;
+    --panel: #151f2e;
+    --panel-2: #1c293c;
+    --line: #2a3a52;
+    --text: #e9eef5;
+    --muted: #8fa1b8;
+    --accent: #ffb020;
+    --accent-2: #2fd17a;
+    --danger: #ff5d5d;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Inter, system-ui, sans-serif;
+    background: radial-gradient(1200px 600px at 50% -200px, #1d2d47 0%, var(--bg) 60%);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header { text-align: center; padding: 36px 16px 8px; }
+  h1, h2, h3 { font-family: Oswald, sans-serif; letter-spacing: .5px; margin: 0; }
+  h1 { font-size: clamp(30px, 6vw, 46px); text-transform: uppercase; }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--muted); margin-top: 6px; }
+  .tabs { display: flex; gap: 8px; justify-content: center; margin: 22px 0 6px; }
+  .tab {
+    background: transparent; color: var(--muted); border: 1px solid var(--line);
+    padding: 10px 20px; border-radius: 999px; font: 600 15px Inter, sans-serif; cursor: pointer;
+  }
+  .tab.active { background: var(--accent); color: #1a1200; border-color: var(--accent); }
+  main { max-width: 980px; margin: 0 auto; padding: 16px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 20px; margin-bottom: 16px;
+  }
+  .searchbar { display: flex; gap: 10px; }
+  input, select {
+    width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 10px; padding: 13px 14px; font: 16px Inter, sans-serif; outline: none;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  button.btn {
+    background: var(--accent); color: #1a1200; border: 0; border-radius: 10px; padding: 0 20px;
+    font: 700 15px Inter, sans-serif; cursor: pointer; white-space: nowrap; min-height: 46px;
+  }
+  button.btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  button.btn.green { background: var(--accent-2); color: #002613; }
+  button:disabled { opacity: .5; cursor: default; }
+  .hint { color: var(--muted); font-size: 14px; margin-top: 8px; }
+  .error { color: var(--danger); margin-top: 10px; font-weight: 500; }
+  .results { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 14px; }
+  .pcard {
+    display: flex; gap: 12px; align-items: center; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 12px; padding: 10px 12px; cursor: pointer; text-align: left; color: var(--text); font: inherit;
+  }
+  .pcard:hover { border-color: var(--accent); }
+  .avatar {
+    width: 48px; height: 48px; border-radius: 50%; background: #0f1826; object-fit: cover; flex: none;
+    display: grid; place-items: center; font-family: Oswald; color: var(--muted);
+  }
+  .pcard b { display: block; }
+  .pcard small { color: var(--muted); }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 6px;
+    background: #24344d; color: var(--accent); margin-right: 4px; text-transform: uppercase;
+  }
+  .question { margin-top: 4px; }
+  .question h3 { font-size: 20px; margin-bottom: 10px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .chip {
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); border-radius: 999px;
+    padding: 4px 10px; font-size: 13px; cursor: pointer;
+  }
+  .chip:hover { color: var(--text); border-color: var(--accent); }
+  .hero { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+  .hero img, .hero .avatar { width: 96px; height: 96px; font-size: 30px; }
+  .hero h2 { font-size: 32px; }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 16px; }
+  .fact { background: var(--panel-2); border-radius: 10px; padding: 12px; border: 1px solid var(--line); }
+  .fact small { color: var(--muted); display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  .fact b { font-family: Oswald; font-size: 24px; }
+  .fact.green b { color: var(--accent-2); }
+  .fact.gold b { color: var(--accent); }
+  .table-wrap { overflow-x: auto; margin-top: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+  th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+  tr.total td { font-weight: 700; color: var(--accent); }
+  .big-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; }
+  .big { background: var(--panel-2); border: 1px solid var(--accent); border-radius: 12px; padding: 16px; }
+  .big small { color: var(--muted); display: block; }
+  .big b { font-family: Oswald; font-size: 38px; color: var(--accent); }
+  .big span { color: var(--muted); font-size: 13px; display: block; }
+  .section-title { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .hidden { display: none !important; }
+  .grid-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
+  label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px; }
+  .del { background: none; border: 0; color: var(--danger); cursor: pointer; font-size: 16px; }
+  .empty { color: var(--muted); text-align: center; padding: 20px; }
+  .spinner { color: var(--muted); margin-top: 12px; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px; }
+  @media (max-width: 560px) { .searchbar { flex-direction: column; } button.btn { width: 100%; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Stat <span>Tracker</span></h1>
+  <div class="sub">Look up any pro player's stats, or track your own.</div>
+  <nav class="tabs">
+    <button class="tab active" data-tab="search">Player Search</button>
+    <button class="tab" data-tab="mine">My Stats</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ====================== PLAYER SEARCH ====================== -->
+  <section id="tab-search">
+    <div class="card">
+      <form id="searchForm" class="searchbar" autocomplete="off">
+        <input id="searchInput" placeholder="Search a player (e.g. LeBron James, Tom Brady, Wayne Gretzky)" />
+        <button class="btn" type="submit">Search</button>
+      </form>
+      <div class="hint">Players only — NBA, WNBA, NFL, MLB, NHL and college basketball and football.</div>
+      <div id="searchMsg"></div>
+      <div id="results" class="results"></div>
+    </div>
+
+    <!-- Step 2: year or career -->
+    <div id="stepYear" class="card hidden">
+      <div id="pickedPlayer"></div>
+      <form id="yearForm" class="question">
+        <h3>Do you want a specific year or career stats?</h3>
+        <div class="row">
+          <input id="yearInput" placeholder='Type a year (e.g. 2016) or "career"' style="flex:1;min-width:220px" />
+          <button class="btn" type="submit">Next</button>
+        </div>
+        <div class="hint" id="yearHint"></div>
+        <div class="chips" id="yearChips"></div>
+        <div id="yearMsg"></div>
+      </form>
+    </div>
+
+    <!-- Step 3: specific stat? -->
+    <div id="stepStat" class="card hidden">
+      <div class="question">
+        <h3>Do you want to look at a specific stat?</h3>
+        <div class="row">
+          <button class="btn" id="statYes" type="button">Yes</button>
+          <button class="btn ghost" id="statNo" type="button">No, show everything</button>
+        </div>
+      </div>
+      <form id="statForm" class="question hidden" style="margin-top:16px">
+        <h3>Type which stat</h3>
+        <div class="row">
+          <input id="statInput" placeholder="e.g. points, rebounds, touchdowns, home runs, goals" style="flex:1;min-width:220px" />
+          <button class="btn" type="submit">Show</button>
+        </div>
+        <div class="chips" id="statChips"></div>
+        <div id="statMsg"></div>
+      </form>
+    </div>
+
+    <!-- Step 4: results -->
+    <div id="stepResult" class="hidden"></div>
+  </section>
+
+  <!-- ====================== MY STATS ====================== -->
+  <section id="tab-mine" class="hidden">
+    <div class="card">
+      <div class="section-title">
+        <h2>Track my stats</h2>
+      </div>
+      <form id="myForm">
+        <div style="margin-top:12px">
+          <label for="mySport">What sport do you want to track? (required)</label>
+          <select id="mySport" required>
+            <option value="">— Pick a sport —</option>
+          </select>
+        </div>
+        <div id="myFields" class="hidden">
+          <div class="grid-form">
+            <div><label>Date</label><input type="date" id="myDate" required /></div>
+            <div><label>Opponent / event</label><input id="myOpp" placeholder="e.g. Hudson" /></div>
+          </div>
+          <div class="grid-form" id="myStatFields"></div>
+          <div class="row" style="margin-top:14px">
+            <button class="btn green" type="submit">Save game</button>
+          </div>
+        </div>
+        <div id="myMsg"></div>
+      </form>
+    </div>
+    <div id="myTables"></div>
+  </section>
+</main>
+
+<footer>Pro stats from ESPN's public data. Your own stats are saved on this device only.</footer>
+
+<script>
+/* ---------------- helpers ---------------- */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const show = (el, on = true) => el.classList.toggle('hidden', !on);
+const msg = (el, text, isError = true) => { el.innerHTML = text ? `<div class="${isError ? 'error' : 'hint'}">${esc(text)}</div>` : ''; };
+const initials = (n) => n.split(' ').map((w) => w[0]).slice(0, 2).join('');
+const avatar = (src, name, cls = 'avatar') =>
+  src ? `<img class="${cls}" src="${esc(src)}" alt="" onerror="this.outerHTML='<div class=&quot;${cls}&quot;>${esc(initials(name))}</div>'">`
+      : `<div class="${cls}">${esc(initials(name))}</div>`;
+const LEAGUE_LABEL = { nba: 'NBA', wnba: 'WNBA', nfl: 'NFL', mlb: 'MLB', nhl: 'NHL',
+  'mens-college-basketball': "Men's College BB", 'womens-college-basketball': "Women's College BB", 'college-football': 'College FB' };
+
+/* ---------------- tabs ---------------- */
+document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x === t));
+  show($('tab-search'), t.dataset.tab === 'search');
+  show($('tab-mine'), t.dataset.tab === 'mine');
+}));
+
+/* ---------------- player search flow ---------------- */
+let player = null;      // full player data
+let choice = null;      // { type:'career' } or { type:'year', season }
+
+function resetSteps() {
+  show($('stepYear'), false); show($('stepStat'), false); show($('stepResult'), false); show($('statForm'), false);
+  $('yearInput').value = ''; $('statInput').value = '';
+  msg($('yearMsg')); msg($('statMsg'));
+}
+
+$('searchForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const q = $('searchInput').value.trim();
+  resetSteps();
+  $('results').innerHTML = '';
+  if (q.length < 2) return msg($('searchMsg'), 'Type a player name to search.');
+  $('searchMsg').innerHTML = '<div class="spinner">Searching players…</div>';
+  try {
+    const r = await fetch('/api/search?q=' + encodeURIComponent(q));
+    const data = await r.json();
+    if (!r.ok) return msg($('searchMsg'), data.error || 'Search failed.');
+    if (!data.players.length) return msg($('searchMsg'), `No players found for "${q}". You can only search for players — try a first and last name.`);
+    msg($('searchMsg'), `${data.players.length} player${data.players.length > 1 ? 's' : ''} found — pick one.`, false);
+    $('results').innerHTML = data.players.map((p, i) => `
+      <button class="pcard" data-i="${i}">
+        ${avatar(p.headshot, p.name)}
+        <span><b>${esc(p.name)}</b>
+        <small><span class="badge">${esc(LEAGUE_LABEL[p.league] || p.league)}</span>${esc(p.team)}</small></span>
+      </button>`).join('');
+    $('results').querySelectorAll('.pcard').forEach((b) =>
+      b.addEventListener('click', () => pickPlayer(data.players[b.dataset.i])));
+  } catch {
+    msg($('searchMsg'), 'Could not search right now. Check your connection and try again.');
+  }
+});
+
+async function pickPlayer(p) {
+  resetSteps();
+  $('results').innerHTML = '';
+  $('searchMsg').innerHTML = '<div class="spinner">Loading ' + esc(p.name) + '…</div>';
+  try {
+    const r = await fetch(`/api/player?sport=${encodeURIComponent(p.sport)}&league=${encodeURIComponent(p.league)}&id=${encodeURIComponent(p.id)}`);
+    const data = await r.json();
+    if (!r.ok) return msg($('searchMsg'), data.error || 'Could not load that player.');
+    msg($('searchMsg'));
+    player = data;
+    if (!player.seasons.length) return msg($('searchMsg'), `${player.name} doesn't have any stats on record yet.`);
+    $('pickedPlayer').innerHTML = `<div class="hero" style="margin-bottom:16px">${avatar(player.headshot, player.name)}
+      <div><h2>${esc(player.name)}</h2><div class="sub">${esc([player.position, player.team, LEAGUE_LABEL[player.league]].filter(Boolean).join(' · '))}</div></div></div>`;
+    const first = player.seasons[0], last = player.seasons[player.seasons.length - 1];
+    $('yearHint').textContent = `Seasons on record: ${first.label} to ${last.label}. Type a year, or type "career".`;
+    $('yearChips').innerHTML = ['career', ...player.seasons.map((s) => s.label)].slice(0, 40)
+      .map((v) => `<span class="chip">${esc(v)}</span>`).join('');
+    $('yearChips').querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => { $('yearInput').value = c.textContent; $('yearInput').focus(); }));
+    show($('stepYear'));
+    $('yearInput').focus();
+  } catch {
+    msg($('searchMsg'), 'Could not load that player right now.');
+  }
+}
+
+function findSeason(text) {
+  const t = text.trim().toLowerCase();
+  const exact = player.seasons.find((s) => s.label.toLowerCase() === t);
+  if (exact) return exact;
+  const n = parseInt(t, 10);
+  if (!/^\d{4}$/.test(t)) return null;
+  // Seasons are keyed by the year they end (e.g. 2002-03 = 2003). Accept either year.
+  return player.seasons.find((s) => s.year === n) || player.seasons.find((s) => s.year === n + 1) || null;
+}
+
+$('yearForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const v = $('yearInput').value.trim();
+  show($('stepStat'), false); show($('stepResult'), false); show($('statForm'), false);
+  if (!v) return msg($('yearMsg'), 'Type a year or "career" first.');
+  if (/^career/i.test(v)) choice = { type: 'career' };
+  else {
+    const s = findSeason(v);
+    if (!s) return msg($('yearMsg'), `${player.name} has no stats for "${v}". Pick a year from ${player.seasons[0].label} to ${player.seasons[player.seasons.length - 1].label}.`);
+    choice = { type: 'year', season: s };
+  }
+  msg($('yearMsg'));
+  show($('stepStat'));
+  $('stepStat').scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+
+$('statNo').addEventListener('click', () => { show($('statForm'), false); renderResult(null); });
+$('statYes').addEventListener('click', () => {
+  show($('stepResult'), false);
+  show($('statForm'));
+  // Suggest stats this player actually has
+  const seen = new Set(), chips = [];
+  for (const c of player.categories) c.fullNames.forEach((n, i) => {
+    const key = c.labels[i]; if (seen.has(key) || /^(GP|GS)$/.test(key)) return; seen.add(key); chips.push(n);
+  });
+  $('statChips').innerHTML = chips.slice(0, 24).map((n) => `<span class="chip">${esc(n)}</span>`).join('');
+  $('statChips').querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => { $('statInput').value = c.textContent; $('statInput').focus(); }));
+  $('statInput').focus();
+});
+
+const ALIASES = {
+  points: ['pts'], point: ['pts'], ppg: ['pts'], rebounds: ['reb'], rebound: ['reb'], boards: ['reb'],
+  assists: ['ast', 'a'], assist: ['ast', 'a'], steals: ['stl', 'sb'], blocks: ['blk'], turnovers: ['to'],
+  threes: ['3pt'], '3s': ['3pt'], 'three pointers': ['3pt'], minutes: ['min'], fouls: ['pf'],
+  touchdowns: ['td'], tds: ['td'], td: ['td'], yards: ['yds'], yds: ['yds'], interceptions: ['int'], picks: ['int'],
+  sacks: ['sack'], tackles: ['tot'], receptions: ['rec'], catches: ['rec'], completions: ['cmp'], carries: ['car'], rushes: ['car'],
+  'home runs': ['hr'], homers: ['hr'], hrs: ['hr'], hits: ['h'], 'batting average': ['avg'], average: ['avg'], rbis: ['rbi'], rbi: ['rbi'],
+  'stolen bases': ['sb'], strikeouts: ['so', 'k'], walks: ['bb'], runs: ['r'], era: ['era'], wins: ['w'], saves: ['sv'],
+  goals: ['g'], goal: ['g'], 'plus minus': ['+/-'], '+/-': ['+/-'], 'penalty minutes': ['pim'], shots: ['sog'], 'games played': ['gp'], games: ['gp'],
+};
+
+function matchStat(input) {
+  const t = input.trim().toLowerCase();
+  const targets = new Set([t, ...(ALIASES[t] || [])]);
+  const hits = [];
+  for (const c of player.categories) {
+    c.labels.forEach((lab, i) => {
+      const l = lab.toLowerCase(), full = (c.fullNames[i] || '').toLowerCase();
+      const exact = targets.has(l) || full === t;
+      const partial = !exact && t.length >= 3 && full.includes(t);
+      if (exact || partial) hits.push({ cat: c, i, exact });
+    });
+  }
+  const exact = hits.filter((h) => h.exact);
+  return exact.length ? exact : hits;
+}
+
+$('statForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const v = $('statInput').value.trim();
+  if (!v) return msg($('statMsg'), 'Type which stat you want to see.');
+  const hits = matchStat(v);
+  if (!hits.length) return msg($('statMsg'), `Couldn't find a stat called "${v}" for ${player.name}. Try one of the stats listed above.`);
+  msg($('statMsg'));
+  renderResult({ text: v, hits });
+});
+
+function rowsFor(cat) {
+  if (choice.type === 'career') return { career: true };
+  return { row: cat.rows.find((r) => r.year === choice.season.year) || null };
+}
+
+function renderResult(stat) {
+  const p = player;
+  const when = choice.type === 'career' ? 'Career' : `${choice.season.label} season`;
+  let html = `<div class="card"><h3>${esc(p.name)} — at a glance</h3>
+    <div class="facts" style="margin-top:12px">
+      <div class="fact gold"><small>Joined the league</small><b>${esc(p.joinedYear ?? '—')}</b></div>
+      <div class="fact ${p.active ? 'green' : ''}"><small>Retired</small><b>${p.active ? 'Still playing' : esc(p.retiredYear ?? '—')}</b></div>
+      <div class="fact"><small>Seasons on record</small><b>${p.seasons.length}</b></div>
+      ${p.draft ? `<div class="fact"><small>Draft</small><b style="font-size:17px">${esc(p.draft)}</b></div>` : ''}
+    </div></div>`;
+
+  if (stat) {
+    // Specific stat view
+    html += `<div class="card"><h3>${esc(when)} — ${esc(stat.text)}</h3><div class="big-stats">`;
+    let any = false;
+    for (const h of stat.hits) {
+      const r = rowsFor(h.cat);
+      const val = r.career ? h.cat.career[h.i] : r.row ? r.row.stats[h.i] : null;
+      if (val == null || val === '') continue;
+      any = true;
+      html += `<div class="big"><small>${esc(h.cat.fullNames[h.i])}</small><b>${esc(val)}</b><span>${esc(h.cat.title)}</span></div>`;
+    }
+    html += `</div>${any ? '' : `<div class="empty">No "${esc(stat.text)}" numbers for ${esc(when.toLowerCase())}.</div>`}`;
+
+    // Season-by-season trend for that stat when viewing career
+    if (choice.type === 'career') {
+      const h = stat.hits[0];
+      html += `<h3 style="margin-top:18px">${esc(h.cat.fullNames[h.i])} by season</h3><div class="table-wrap"><table>
+        <tr><th>Season</th><th>Team</th><th>${esc(h.cat.labels[h.i])}</th></tr>
+        ${h.cat.rows.map((r) => `<tr><td>${esc(r.label)}</td><td>${esc(r.team)}</td><td>${esc(r.stats[h.i])}</td></tr>`).join('')}
+        <tr class="total"><td>Career</td><td></td><td>${esc(h.cat.career[h.i] ?? '')}</td></tr></table></div>`;
+    }
+    html += `</div>`;
+  } else {
+    // Full tables
+    for (const c of p.categories) {
+      const r = rowsFor(c);
+      let body = '';
+      if (r.career) {
+        body = c.rows.map((row) => `<tr><td>${esc(row.label)}</td><td>${esc(row.team)}</td>${row.stats.map((s) => `<td>${esc(s)}</td>`).join('')}</tr>`).join('');
+        if (c.career.length) body += `<tr class="total"><td>Career</td><td></td>${c.career.map((s) => `<td>${esc(s)}</td>`).join('')}</tr>`;
+      } else if (r.row) {
+        body = `<tr><td>${esc(r.row.label)}</td><td>${esc(r.row.team)}</td>${r.row.stats.map((s) => `<td>${esc(s)}</td>`).join('')}</tr>`;
+      } else continue;
+      html += `<div class="card"><h3>${esc(c.title)} — ${esc(when)}</h3><div class="table-wrap"><table>
+        <tr><th>Season</th><th>Team</th>${c.labels.map((l, i) => `<th title="${esc(c.fullNames[i])}">${esc(l)}</th>`).join('')}</tr>${body}</table></div></div>`;
+    }
+  }
+  html += `<div class="row" style="justify-content:center;margin-bottom:20px">
+    <button class="btn ghost" onclick="show($('stepResult'),false);$('yearInput').focus();$('stepYear').scrollIntoView({behavior:'smooth'})">Pick another year</button>
+    <button class="btn ghost" onclick="$('searchInput').value='';resetSteps();$('searchInput').focus();window.scrollTo({top:0,behavior:'smooth'})">Search another player</button></div>`;
+  $('stepResult').innerHTML = html;
+  show($('stepResult'));
+  $('stepResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ---------------- my stats tracker ---------------- */
+const SPORTS = {
+  Basketball: ['Points', 'Rebounds', 'Assists', 'Steals', 'Blocks', 'Turnovers', '3-Pointers Made', 'Free Throws Made', 'Minutes'],
+  Football: ['Passing Yards', 'Passing TDs', 'Rushing Yards', 'Rushing TDs', 'Receptions', 'Receiving Yards', 'Receiving TDs', 'Tackles', 'Sacks', 'Interceptions'],
+  Baseball: ['At Bats', 'Hits', 'Runs', 'RBIs', 'Home Runs', 'Walks', 'Strikeouts', 'Stolen Bases'],
+  Softball: ['At Bats', 'Hits', 'Runs', 'RBIs', 'Home Runs', 'Walks', 'Strikeouts', 'Stolen Bases'],
+  Hockey: ['Goals', 'Assists', 'Shots', 'Plus/Minus', 'Penalty Minutes', 'Saves'],
+  Soccer: ['Goals', 'Assists', 'Shots', 'Shots on Goal', 'Saves', 'Minutes'],
+  Volleyball: ['Kills', 'Aces', 'Digs', 'Blocks', 'Assists', 'Errors'],
+  Golf: ['Score', 'Par', 'Putts', 'Fairways Hit', 'Greens in Regulation', 'Birdies'],
+  Tennis: ['Sets Won', 'Sets Lost', 'Games Won', 'Games Lost', 'Aces', 'Double Faults'],
+  'Track & Field': ['Event Time (sec)', 'Distance (ft)', 'Place'],
+  Lacrosse: ['Goals', 'Assists', 'Ground Balls', 'Caused Turnovers', 'Saves'],
+};
+const NO_TOTAL = /(Plus\/Minus|Score|Par|Place|Event Time|Distance)/; // average these, don't sum
+const KEY = 'myStats.v1';
+const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } };
+const save = (rows) => { try { localStorage.setItem(KEY, JSON.stringify(rows)); } catch {} };
+
+$('mySport').innerHTML += Object.keys(SPORTS).map((s) => `<option>${esc(s)}</option>`).join('');
+$('myDate').valueAsDate = new Date();
+
+$('mySport').addEventListener('change', () => {
+  const s = $('mySport').value;
+  show($('myFields'), !!s);
+  msg($('myMsg'));
+  if (!s) return;
+  $('myStatFields').innerHTML = SPORTS[s].map((f, i) =>
+    `<div><label for="f${i}">${esc(f)}</label><input id="f${i}" type="number" step="any" inputmode="decimal" placeholder="0" /></div>`).join('');
+});
+
+$('myForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const sport = $('mySport').value;
+  if (!sport) return msg($('myMsg'), 'You have to pick which sport you want to track first.');
+  const stats = {};
+  SPORTS[sport].forEach((f, i) => { const v = $('f' + i).value; if (v !== '') stats[f] = Number(v); });
+  if (!Object.keys(stats).length) return msg($('myMsg'), 'Enter at least one stat.');
+  const rows = load();
+  rows.push({ id: Date.now(), sport, date: $('myDate').value, opp: $('myOpp').value.trim(), stats });
+  save(rows);
+  SPORTS[sport].forEach((f, i) => ($('f' + i).value = ''));
+  $('myOpp').value = '';
+  msg($('myMsg'), `Saved your ${sport.toLowerCase()} game!`, false);
+  renderMine();
+});
+
+function renderMine() {
+  const rows = load();
+  if (!rows.length) { $('myTables').innerHTML = '<div class="card empty">No games saved yet. Pick a sport above and add your first game.</div>'; return; }
+  const bySport = {};
+  rows.forEach((r) => (bySport[r.sport] ||= []).push(r));
+  $('myTables').innerHTML = Object.entries(bySport).map(([sport, games]) => {
+    games.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    const fields = SPORTS[sport] || [...new Set(games.flatMap((g) => Object.keys(g.stats)))];
+    const used = fields.filter((f) => games.some((g) => g.stats[f] != null));
+    const tot = (f) => games.reduce((s, g) => s + (g.stats[f] ?? 0), 0);
+    const cnt = (f) => games.filter((g) => g.stats[f] != null).length;
+    const fmt = (n) => (Math.round(n * 10) / 10).toString();
+    return `<div class="card"><div class="section-title"><h2>${esc(sport)}</h2><span class="hint">${games.length} game${games.length > 1 ? 's' : ''}</span></div>
+      <div class="table-wrap"><table>
+      <tr><th>Date</th><th>Opponent</th>${used.map((f) => `<th>${esc(f)}</th>`).join('')}<th></th></tr>
+      ${games.map((g) => `<tr><td>${esc(g.date)}</td><td>${esc(g.opp || '—')}</td>${used.map((f) => `<td>${esc(g.stats[f] ?? '—')}</td>`).join('')}
+        <td><button class="del" title="Delete" data-id="${g.id}">✕</button></td></tr>`).join('')}
+      <tr class="total"><td>Total</td><td></td>${used.map((f) => `<td>${NO_TOTAL.test(f) ? '—' : fmt(tot(f))}</td>`).join('')}<td></td></tr>
+      <tr class="total"><td>Per game</td><td></td>${used.map((f) => `<td>${cnt(f) ? fmt(tot(f) / cnt(f)) : '—'}</td>`).join('')}<td></td></tr>
+      </table></div></div>`;
+  }).join('');
+  $('myTables').querySelectorAll('.del').forEach((b) => b.addEventListener('click', () => {
+    if (!confirm('Delete this game?')) return;
+    save(load().filter((r) => String(r.id) !== b.dataset.id));
+    renderMine();
+  }));
+}
+renderMine();
+</script>
+</body>
+</html>

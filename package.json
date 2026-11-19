@@ -1,0 +1,7 @@
+{
+  "name": "player-stat-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Search pro players' stats and track your own.",
+  "engines": { "node": ">=18" }
+}
